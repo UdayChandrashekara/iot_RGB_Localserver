@@ -1,0 +1,132 @@
+/* created 2017
+   by Uday Chandrashekaara
+*/
+
+#include <ESP8266WiFi.h>
+
+ 
+const char* ssid = "*******"; //WIFI Name, WeMo will only connect to a 2.4GHz network.
+const char* password = "*******"; //WIFI Password
+ 
+ //Setting pin number
+int RedPin = D2;
+int GreenPin = D3;
+int BluePin = D4;
+
+// values for each pins
+int Redvalue=0;
+int Greenvalue=0;
+int Bluevalue=0;
+ 
+WiFiServer server(80);
+ 
+void setup() {
+  Serial.begin(9600);
+  delay(10);
+  
+  
+  // initializing pin
+  pinMode(RedPin, OUTPUT);
+  pinMode(GreenPin, OUTPUT);
+  pinMode(BluePin, OUTPUT);
+
+ // setting values for each pins
+  analogWrite(RedPin, 0);
+  analogWrite(GreenPin, 0);
+  analogWrite(BluePin, 0);
+  
+  
+  // Connect to WiFi network
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+ 
+  // Start the server
+  server.begin();
+  Serial.println("Server started");
+ 
+  // Print the IP address
+  Serial.print("Use this URL : ");
+  Serial.print("http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("/");
+ 
+}
+ 
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+ 
+  // Wait until the client sends some data
+  Serial.println("new client");
+  while(!client.available()){
+    delay(1);
+  }
+ 
+  // Read the first line of the request
+  String request = client.readStringUntil('\r');
+  Serial.println(request);
+  client.flush();
+  // Match the request
+  if (request.indexOf("submit") != -1) {
+    int redindex=request.indexOf("Redvalue");
+    Redvalue = contovar(request[redindex+9],request[redindex+10],request[redindex+11],request[redindex+12]);
+    int greenindex=request.indexOf("Greenvalue");
+    Greenvalue = contovar(request[greenindex+11],request[greenindex+12],request[greenindex+13],request[greenindex+14]);
+    int blueindex=request.indexOf("Bluevalue");
+    Bluevalue = contovar(request[blueindex+10],request[blueindex+11],request[blueindex+12],request[blueindex+13]);
+    Serial.println(Redvalue);
+    Serial.println(Greenvalue);
+    Serial.println(Bluevalue);
+    analogWrite(RedPin,Redvalue);
+    analogWrite(GreenPin,Greenvalue);
+    analogWrite(BluePin,Bluevalue);
+  } 
+ 
+ 
+  // Return the response
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println(""); //  do not forget this one
+  client.println("<!DOCTYPE HTML>");
+  client.println("<html>");
+ 
+  client.print("Enter the required value ");
+ 
+  client.println("<form id='txt_form' name='frmText'><label>Red: <input type='text' name='Redvalue'><label><br><br><label>Green: <input type='text' name='Greenvalue'><label><br><br><label>Blue: <input type='text' name='Bluevalue'><label><br><br></form> <input type='submit' name='submit' value='SendText' >");
+
+  client.println("</html>");
+  delay(1);
+  Serial.println("Client disconnected");
+  Serial.println("");
+}
+int contovar(char s,char t, char u, char v){
+  int val=0;
+  if((s-'0')>=0 && (s-'0')<=9){
+    val=(s-'0');
+  }
+  if((t-'0')>=0 && (t-'0')<=9){
+    val=val*10;
+    val=val+(t-'0');
+  }
+  if((u-'0')>=0 && (u-'0')<=9){
+    val=val*10;
+    val=val+(u-'0');
+  }
+  if((v-'0')>=0 && (v-'0')<=9){
+    val=val*10;
+    val=val+(v-'0');
+  }
+  return val;
+}
